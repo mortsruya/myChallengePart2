@@ -4,6 +4,7 @@ import os
 
 pagesList = []
 languages = {}
+englishUS = 'EnglishUS'
 
 
 def getLanguages():
@@ -14,17 +15,17 @@ def getLanguages():
         langCode = lang.findChild()['href'].replace("/","")
         langName = lang.findChild().text.strip().replace(" ","")
         languages[langCode] = langName
-    languages['en-us']="English US"
+    languages['en-us']=englishUS
         
     
 
 def addLangNameToSplitedPath(splitedPath):
     if len(splitedPath) < 2: 
-        return splitedPath.append("English US")
+        return splitedPath.append(englishUS)
     if languages.get(splitedPath[1]) != None:
         splitedPath[1] = languages[splitedPath[1]]
     else:
-        splitedPath.insert(1,"English US")
+        splitedPath.insert(1,englishUS)
     return splitedPath
         
     
