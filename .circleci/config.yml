@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - checkout
-
+      
       - run:
           name: install dependencies
           command: |
@@ -27,3 +27,14 @@ jobs:
             . venv/bin/activate
             pip install requests
             pip install bs4
+
+      - run:
+          name: run tests
+          command: |
+            . venv/bin/activate
+            python myChallenge.py
+
+      - store_artifacts:
+          path: /naturalcycles.com
+          destination: /naturalcycles.com
+          
