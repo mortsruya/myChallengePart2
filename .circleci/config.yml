@@ -36,7 +36,4 @@ jobs:
 
       - store_artifacts:
           path: /testToUpload
-
-      - store_artifacts:
-          path: testToUpload
           
