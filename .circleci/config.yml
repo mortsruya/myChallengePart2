@@ -19,7 +19,7 @@ jobs:
 
     steps:
       - checkout
-      
+
       - run:
           name: install dependencies
           command: |
@@ -36,5 +36,4 @@ jobs:
 
       - store_artifacts:
           path: /naturalcycles.com
-          destination: /naturalcycles.com
           

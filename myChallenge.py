@@ -12,7 +12,7 @@ def getLanguages():
     langList = soup.findAll(class_="lang")
     for lang in langList:
         langCode = lang.findChild()['href'].replace("/","")
-        langName = lang.findChild().text.strip()
+        langName = lang.findChild().text.strip().replace(" ","")
         languages[langCode] = langName
     languages['en-us']="English US"
         
@@ -53,7 +53,7 @@ def isValidImg(img):
         
 
 def createDirFromSite(site):
-    splitedSite = site.split("/")
+    splitedSite = site.replace(".","").split("/")
     splitedSite.pop(0)
     splitedSite.pop(0)
     
@@ -87,7 +87,6 @@ def downloadImages(site):
             splitedurl = url.split("/")
             imageName = splitedurl[len(splitedurl)-1].replace("?", "")
             fileName = os.path.join(folderPath, imageName)
-            print(fileName)
             with open(fileName, 'wb') as f:                
                 try:
                     response = requests.get(url)
