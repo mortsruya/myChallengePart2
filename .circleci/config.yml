@@ -35,5 +35,5 @@ jobs:
             python myChallenge.py
 
       - store_artifacts:
-          path: /naturalcycles.com
+          path: /naturalcyclescom
           
