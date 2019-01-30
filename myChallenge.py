@@ -8,6 +8,10 @@ englishUS = 'EnglishUS'
 
 
 def getLanguages():
+    """Get all Languages from the site and store them in a dictionary with language Code and Name 
+    for laster use on the folder names.
+    some English US URLs has /en-us/ inside and some dont - so added 2 keys with same languageName
+    """
     response = requests.get('https://naturalcycles.com')
     soup = BeautifulSoup(response.text, 'html.parser')
     langList = soup.findAll(class_="lang")
@@ -17,9 +21,14 @@ def getLanguages():
         languages[langCode] = langName
     languages['en-us']=englishUS
         
-    
 
 def addLangNameToSplitedPath(splitedPath):
+    """Adds language name to splittedPath, if a language does not exist in path adds EnglishUS
+    Args:
+        splitedPath: array of a splited Url path 
+    Returns:
+        array with full language Name
+    """
     if len(splitedPath) < 2: 
         return splitedPath.append(englishUS)
     if languages.get(splitedPath[1]) != None:
@@ -30,50 +39,84 @@ def addLangNameToSplitedPath(splitedPath):
         
     
 def isLinkValid(link):
+    """Checks if a link is valid (and should be scanned for images)
+    Args:
+        link: the link to be checked
+    Returns:
+        bool: true if the link is valid, false if its invalid
+    """
     if ".com" in link:
         start,end = link.split(".com",1)
-        if not(start.endswith("naturalcycles")):
-            return 0
+        if not(start.endswith("naturalcycles")): #not a naturalCycles URL blabla.com
+            return False
     if "www" in link:
         start,end = link.split("www",1)
-        if("naturalcycles" not in end):
-            return 0
-    if (len(link) <= 1 or '#' in link or link.startswith("mail") or 'click?' in link):
-        return 0
+        if("naturalcycles" not in end): #not a naturalCycles URL www.blabla.es
+            return False
+    if (len(link) <= 1 or '#' in link or link.startswith("mail") or 'click?' in link): #not a website link
+        return False
     if ".naturalcycles.com" in link:
-        start,end = link.split("naturalcycles.com",1)
+        start,end = link.split("naturalcycles.com",1) #urls with naturalCycles but not on the website: blog.naturalcycles.com
         if(start not in ["http://www.","http://www","http://","https://"]):
-           return 0
-    return 1
+           return False
+    return True
 
-def isValidImg(img):
-     if img.has_attr('src'):
-         if img['src'].endswith(('.png','.jpg','.jpeg','.gif','.tif')):
-             return 1
-     return 0;    
-        
-
-def createDirFromSite(site):
-    splitedSite = site.replace(".","").split("/")
-    splitedSite.pop(0)
-    splitedSite.pop(0)
+def isValidImg(imgUrl):
+    """checkes if an img link is valid - has an image file type
+    Args:
+        imgUrl: a url of an image from an img tag
+    Returns:
+        bool: true if its valid, false if its invalid
+    """
+    if imgUrl.has_attr('src'):
+         if imgUrl['src'].endswith(('.png','.jpg','.jpeg','.gif','.tif')):
+             return True
+    return False
     
-    if "www." in splitedSite[0]:
-        www,splitedSite[0] = splitedSite[0].split("www.",1)
-    splitedPathWithLang = addLangNameToSplitedPath(splitedSite)
+def createDirFromUrl(url):
+    """creates a diractory from a url (with required path hirarchy)
+    Args:
+        url: url of a web page
+    Returns:
+        string: a folder path created from the site
+    """
+    splitedUrl = url.replace(".","").split("/")
+    splitedUrl.pop(0)
+    splitedUrl.pop(0)
+    
+    if "www." in splitedUrl[0]:
+        www,splitedUrl[0] = splitedUrl[0].split("www.",1)
+    splitedPathWithLang = addLangNameToSplitedPath(splitedUrl)
     folderPath = ""
-    for sitePart in splitedSite:
+    for sitePart in splitedUrl:
         folderPath = os.path.join(folderPath,sitePart).replace("?", "")
     if not os.path.exists(folderPath):
         os.makedirs(folderPath)
     return folderPath
 
-def downloadImages(site):
-    if site in pagesList:
-        return
-    pagesList.append(site)
+def createImageNameFromUrl(imgUrl):
+    """creates an image name from an image url
+    Args:
+        imgUrl: a url of an image
+    Returns:
+        string: an image name 
+    """  
+    splitedurl = imgUrl.split("/")
+    return splitedurl[len(splitedurl)-1].replace("?", "")
 
-    response = requests.get(site)
+def downloadImages(url):
+    """download all images of a url and its sub pages and store them in the same hirarchy folder
+    url:
+        url: url of a web page
+    """
+    
+    #preventing scanning a url more than once
+    if url in pagesList: 
+        return
+    pagesList.append(url)
+
+    #get all images from the url
+    response = requests.get(url)
     soup = BeautifulSoup(response.text, 'html.parser')
     img_tags = soup.find_all('img')
 
@@ -82,30 +125,30 @@ def downloadImages(site):
         if isValidImg(img):
             urls.append(img['src'])
     if len(urls) > 0:
-        folderPath = createDirFromSite(site)
+        folderPath = createDirFromUrl(url)
         for url in urls:
             if url == "": continue
-            splitedurl = url.split("/")
-            imageName = splitedurl[len(splitedurl)-1].replace("?", "")
+            imageName = createImageNameFromUrl(url)
             fileName = os.path.join(folderPath, imageName)
             with open(fileName, 'wb') as f:                
                 try:
+                    print("Downloading .... " + url)
                     response = requests.get(url)
                     f.write(response.content)
                 except:
-                    print("could not download:  " + url)
+                    print("Could not download:  " + url)
 
+    #get all links of the current webpage and recorsivly download images from them
     linkTags = soup.findAll('a')
     if len(linkTags) > 0:
         for linkTag in linkTags:
             if linkTag.has_attr('href'):
-                newPageUrl = linkTag['href']
-                if (isLinkValid(newPageUrl)):
-                    if newPageUrl[0] == '/':
-                        newPageUrl = 'https://naturalcycles.com' + newPageUrl
-                    downloadImages(newPageUrl)
+                subPageUrl = linkTag['href']
+                if (isLinkValid(subPageUrl)):
+                    if subPageUrl[0] == '/': #some Urls are relative - using a full url to srote them in a valid diractory
+                        subPageUrl = 'https://naturalcycles.com' + subPageUrl
+                    downloadImages(subPageUrl)
 
 # main
-
 getLanguages()
 downloadImages('https://naturalcycles.com')
